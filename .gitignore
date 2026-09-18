@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Environment and local artifacts
+.env
+.env.*
+!.env.example
+data/raw/
+data/processed/
+models/*.joblib
+models/*.json
+data/*.csv
+data/*.parquet
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

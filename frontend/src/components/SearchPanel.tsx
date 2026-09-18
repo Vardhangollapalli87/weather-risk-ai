@@ -1,0 +1,6 @@
+import type { Location } from "../types";
+
+type Props = { query: string; results: Location[]; loading: boolean; error: string | null; onQueryChange: (value: string) => void; onSearch: () => void; onSelect: (location: Location) => void };
+export default function SearchPanel({ query, results, loading, error, onQueryChange, onSearch, onSelect }: Props) {
+  return <section className="search-panel"><label htmlFor="location-search">Search a city or place</label><div className="search-row"><input id="location-search" value={query} maxLength={100} placeholder="e.g. Hyderabad" onChange={event => onQueryChange(event.target.value)} onKeyDown={event => event.key === "Enter" && onSearch()} /><button onClick={onSearch} disabled={loading || !query.trim()}>{loading ? "Searching…" : "Search"}</button></div>{error && <p className="inline-error" role="alert">{error}</p>}{results.length > 0 && <ul className="location-results">{results.map(location => <li key={`${location.id}-${location.latitude}`}><button onClick={() => onSelect(location)}><span>{location.name}{location.admin1 ? `, ${location.admin1}` : ""}</span><small>{location.country ?? ""} · {location.latitude.toFixed(3)}°, {location.longitude.toFixed(3)}°</small></button></li>)}</ul>}</section>;
+}
