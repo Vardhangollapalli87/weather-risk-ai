@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 from uuid import uuid4
+import logging
+from time import perf_counter
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -10,7 +12,7 @@ from app.api.routes.weather import router as weather_router
 from app.api.routes.analysis import router as analysis_router
 from app.config import get_settings
 from app.core.cache import TTLCache
-from app.core.exceptions import MLUnavailableError, ProviderError, RuntimeDataError
+from app.core.exceptions import InputValidationError, MLUnavailableError, ProviderError, RuntimeDataError
 from app.ml.inference import MLService
 from app.models.errors import ErrorDetail, ErrorResponse
 from app.models.location import Location
@@ -41,7 +43,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="WeatherRisk AI", version="0.1.0", lifespan=lifespan)
 settings = get_settings()
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=False, allow_methods=["GET"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Content-Type", "X-Request-ID"])
 app.include_router(weather_router)
 app.include_router(analysis_router)
 
@@ -71,9 +73,20 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     return error_response(422, "VALIDATION_ERROR", "Request parameters are invalid.", False, getattr(request.state, "request_id", None))
 
 
+@app.exception_handler(InputValidationError)
+async def input_validation_handler(request: Request, exc: InputValidationError) -> JSONResponse:
+    return error_response(422, "VALIDATION_ERROR", str(exc), False, getattr(request.state, "request_id", None))
+
+
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next):
     request.state.request_id = request.headers.get("X-Request-ID", str(uuid4()))
-    response = await call_next(request)
+    started = perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logging.getLogger("weatherrisk.request").exception("request_id=%s method=%s path=%s unhandled_error", request.state.request_id, request.method, request.url.path)
+        response = error_response(500, "INTERNAL_ERROR", "An unexpected server error occurred.", False, request.state.request_id)
+    logging.getLogger("weatherrisk.request").info("request_id=%s method=%s path=%s status=%s duration_ms=%.1f", request.state.request_id, request.method, request.url.path, response.status_code, (perf_counter() - started) * 1000)
     response.headers["X-Request-ID"] = request.state.request_id
     return response

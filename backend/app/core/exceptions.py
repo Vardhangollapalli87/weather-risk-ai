@@ -14,3 +14,11 @@ class MLUnavailableError(Exception):
 
 class RuntimeDataError(Exception):
     pass
+
+
+class MLArtifactError(Exception):
+    pass
+
+
+class InputValidationError(Exception):
+    pass

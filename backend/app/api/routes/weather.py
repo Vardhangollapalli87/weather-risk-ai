@@ -6,6 +6,7 @@ from app.models.location import Location
 from app.models.weather import WeatherSnapshot
 from app.services.location_service import LocationService
 from app.services.weather_service import WeatherService
+from app.core.exceptions import InputValidationError
 
 router = APIRouter(tags=["weather"])
 
@@ -20,7 +21,10 @@ def weather_service(request: Request) -> WeatherService:
 
 @router.get("/locations", response_model=list[Location])
 async def locations(query: Annotated[str, Query(min_length=1, max_length=100)], service: Annotated[LocationService, Depends(location_service)]) -> list[Location]:
-    return await service.search(query.strip())
+    normalized_query = query.strip()
+    if not normalized_query:
+        raise InputValidationError("Location query must contain non-whitespace characters.")
+    return await service.search(normalized_query)
 
 
 @router.get("/weather", response_model=WeatherSnapshot)

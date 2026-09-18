@@ -1,29 +1,75 @@
+# ============================================================
 # Python
+# ============================================================
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
 .venv/
 venv/
+env/
+ENV/
 
-# Node
+# ============================================================
+# Node / React / Vite
+# ============================================================
 node_modules/
-dist/
-.vite/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
-# Environment and local artifacts
+# ============================================================
+# Environment / secrets
+# ============================================================
 .env
 .env.*
 !.env.example
-data/raw/
-data/processed/
+
+# ============================================================
+# Generated ML / dataset artifacts
+# ============================================================
+data/raw/*
+data/processed/*
 models/*.joblib
+models/*.pkl
+models/*.pickle
 models/*.json
 data/*.csv
 data/*.parquet
-*.log
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!models/.gitkeep
 
-# Editor / OS
+# ============================================================
+# Logs, temporary files, and packaging
+# ============================================================
+*.log
+*.tmp
+*.temp
+build/
+dist/
+*.egg-info/
+
+# ============================================================
+# OS / editor files
+# ============================================================
 .DS_Store
 Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
+*.swp
+*.swo

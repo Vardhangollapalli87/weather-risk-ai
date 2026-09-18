@@ -1,4 +1,4 @@
-from app.core.exceptions import MLUnavailableError, RuntimeDataError
+from app.core.exceptions import MLArtifactError, MLUnavailableError, RuntimeDataError
 from app.ml.inference import MLService
 from app.models.analysis import AnalysisResponse
 from app.risk.engine import assess_risk
@@ -21,6 +21,8 @@ class AnalysisService:
         try:
             prediction = self.ml_service.predict(weather)
         except FileNotFoundError as exc:
+            raise MLUnavailableError(str(exc)) from exc
+        except MLArtifactError as exc:
             raise MLUnavailableError(str(exc)) from exc
         except ValueError as exc:
             raise RuntimeDataError(str(exc)) from exc

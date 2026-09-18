@@ -45,8 +45,25 @@ def test_empty_and_long_location_query_are_rejected() -> None:
     with TestClient(app) as client:
         empty = client.get("/locations", params={"query": ""})
         long = client.get("/locations", params={"query": "a" * 101})
+        whitespace = client.get("/locations", params={"query": "   "})
     assert empty.status_code == 422
     assert long.status_code == 422
+    assert whitespace.status_code == 422
+    assert whitespace.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_coordinate_boundaries_and_cors_post_preflight() -> None:
+    with TestClient(app) as client:
+        setup_services()
+        minimum = client.get("/weather", params={"latitude": -90, "longitude": -180})
+        maximum = client.get("/weather", params={"latitude": 90, "longitude": 180})
+        invalid = client.get("/weather", params={"latitude": 90.01, "longitude": 180.01})
+        preflight = client.options("/analysis", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"})
+    assert minimum.status_code != 422
+    assert maximum.status_code != 422
+    assert invalid.status_code == 422
+    assert preflight.status_code == 200
+    assert "POST" in preflight.headers["access-control-allow-methods"]
 
 
 def test_provider_failure_is_structured() -> None:

@@ -6,11 +6,11 @@ WeatherRisk AI provides real-time, explainable **significant-rainfall risk** int
 
 ## Current phase
 
-P0 Phase 3B complete — React dashboard.
+Phase 4 complete — integration, security, and production-readiness audit.
 
 ## Status
 
-Weather/location foundation, historical ML pipeline, deterministic risk engine, LangGraph evidence-constrained explanation, and React dashboard are implemented and tested. No external LLM provider, RAG, database, authentication, or deployment has been added.
+The complete local vertical slice is implemented and hardened: React dashboard, FastAPI, Open-Meteo, ML inference, deterministic risk, and LangGraph template explanation. No external LLM provider, RAG, database, authentication, or deployment has been added.
 
 ## Completed
 
@@ -27,14 +27,15 @@ Weather/location foundation, historical ML pipeline, deterministic risk engine, 
 - Calibrated Random Forest selected with validation threshold 0.55; deterministic risk engine and `POST /analysis` implemented.
 - Single-agent LangGraph workflow implemented with a typed evidence object, provider-independent explanation interface, validation, and deterministic template fallback.
 - Responsive Vite + React + TypeScript dashboard implemented with centralized API client, location search, analysis display, forecast cards, explanation, provenance/freshness, loading, no-results, retry, and error states.
+- Phase 4 audit fixed browser CORS for JSON `POST /analysis`, whitespace-only location validation, corrupt/invalid ML artifact handling, safe request logging, frontend request race cancellation, and generated TypeScript artifact ignores.
 
 ## Current work
 
-Phase 3B is complete.
+Phase 4 is complete.
 
 ## Exact next task
 
-Phase 4 — Full integration, testing, security review, performance and production polish. Do not expand product scope without an explicit decision.
+Phase 5 — Deployment + final project packaging. Do not implement it without explicit direction.
 
 ## Architecture summary
 
@@ -42,7 +43,7 @@ React → FastAPI modular monolith → OpenMeteoProvider → normalized weather 
 
 ## Changed files
 
-Phase 3B added `frontend/` Vite configuration, TypeScript types, centralized API client, React components (`SearchPanel`, `RiskCard`, `Forecast`, `Explanation`), responsive CSS, and frontend environment example. It updated this handoff. Local ignored Phase 2 data/model artifacts remain unchanged.
+Phase 4 updated backend exception/CORS/request logging logic, ML artifact validation, frontend abortable API requests, root/frontend build configuration, `.gitignore`, targeted hardening tests, README, and this handoff. The tracked generated TypeScript build-info files were removed from the Git index while retained locally and ignored going forward. Unnecessary `.gitkeep` placeholders were removed from populated source directories; the empty `rag/.gitkeep` remains intentional. Local Phase 2 data/model artifacts remain unchanged and ignored.
 
 ## API / ML / agent status
 
@@ -54,8 +55,8 @@ See `.env.example`. No secrets are required for Open-Meteo. An LLM key is option
 
 ## Tests and known issues
 
-`npm run build` succeeds in `frontend/`. Backend regression suite: 28 passed (one third-party TestClient deprecation warning). A local smoke check started backend and Vite, confirmed the frontend returned HTTP 200, and a real Open-Meteo-backed `/analysis` response was fresh with a template explanation. Manual visual/browser interaction and automated frontend component tests have not been run. Main limitations: no configured external LLM (by design), practical rather than full NLP validation, reanalysis/grid-point data, three training locations, temporal performance drop, no hydrological data, and no persistent history.
+Audit results: `pytest -q` has 30 passing tests and one third-party TestClient deprecation warning; `npm run build` succeeds and `npm audit --omit=dev --audit-level=high` found zero production dependency vulnerabilities. New tests cover CORS POST preflight, whitespace queries, coordinate bounds, and an invalid ML artifact. `.gitignore` was validated against local environments, dependencies, generated datasets/models, Vite output, and TypeScript build products; source, docs, `.github/copilot-instructions.md`, and configuration examples remain trackable. No secrets or absolute machine paths were found in source/configuration (only empty optional LLM placeholders). Local end-to-end verification started FastAPI and Vite; frontend served HTTP 200, `/health` was OK, geocoding returned 10 Hyderabad results, and real Open-Meteo-backed analyses returned Hyderabad Low and Mumbai Moderate with the valid template explanation. Browser visual interaction, device-browser accessibility testing, and automated frontend component tests have not been run. Main limitations: no configured external LLM (by design), practical rather than full NLP validation, reanalysis/grid-point data, three training locations, temporal performance drop, no hydrological data, and no persistent history.
 
 ## Last completed milestone
 
-P0 Phase 3B React dashboard, 2026-09-19.
+Phase 4 integration and hardening, 2026-09-19.
