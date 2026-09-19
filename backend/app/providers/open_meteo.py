@@ -1,12 +1,15 @@
 import asyncio
 from datetime import date, datetime, timedelta, timezone
+import logging
+import re
 from typing import Any
 
 import httpx
 
 from app.config import Settings
-from app.core.exceptions import ProviderError, ProviderMalformedResponse
+from app.core.exceptions import LocationProviderError, ProviderError, ProviderMalformedResponse
 from app.core.freshness import assess_freshness
+from app.core.request_context import request_id_context
 from app.models.location import Location, ReverseLocation
 from app.models.weather import CurrentConditions, HourlyWeather, ProviderMetadata, RainfallSummary, WeatherSnapshot
 
@@ -16,6 +19,7 @@ class OpenMeteoProvider:
     forecast_url = "https://api.open-meteo.com/v1/forecast"
     archive_url = "https://archive-api.open-meteo.com/v1/archive"
     hourly_fields = ["temperature_2m", "relative_humidity_2m", "pressure_msl", "wind_speed_10m", "cloud_cover", "precipitation", "precipitation_probability", "weather_code"]
+    logger = logging.getLogger("weatherrisk.provider")
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         self.settings = settings
@@ -26,9 +30,10 @@ class OpenMeteoProvider:
         client = self._client or httpx.AsyncClient(timeout=self.settings.weather_http_timeout_seconds)
         try:
             for attempt in range(self.settings.weather_max_retries + 1):
+                response = None
                 try:
                     response = await client.get(url, params=params, headers=headers)
-                    if response.status_code >= 500:
+                    if response.status_code == 429 or response.status_code >= 500:
                         raise ProviderError("Weather provider is temporarily unavailable")
                     response.raise_for_status()
                     payload = response.json()
@@ -36,11 +41,12 @@ class OpenMeteoProvider:
                         raise ProviderMalformedResponse("Weather provider returned an invalid response", retryable=False)
                     return payload
                 except (httpx.TimeoutException, httpx.NetworkError, ProviderError) as exc:
+                    self.logger.warning("provider=%s operation=http_request status=%s retry_attempt=%s request_id=%s", self._provider_name(url), getattr(response, "status_code", None), attempt, request_id_context.get())
                     if attempt == self.settings.weather_max_retries:
                         if isinstance(exc, ProviderError):
                             raise exc
                         raise ProviderError("Weather provider request timed out") from exc
-                    await asyncio.sleep(0.1 * (attempt + 1))
+                    await asyncio.sleep(min(2.0, 0.2 * (2**attempt)))
                 except (httpx.HTTPStatusError, ValueError) as exc:
                     raise ProviderError("Weather provider request failed", retryable=False) from exc
         finally:
@@ -59,25 +65,36 @@ class OpenMeteoProvider:
             raise ProviderMalformedResponse("Weather provider returned malformed location data", retryable=False) from exc
 
     async def reverse_geocode(self, latitude: float, longitude: float) -> ReverseLocation:
-        payload = await self._request(
-            self.settings.nominatim_reverse_url,
-            {"lat": latitude, "lon": longitude, "format": "jsonv2", "zoom": 10, "addressdetails": 1},
-            {"User-Agent": self.settings.nominatim_user_agent},
-        )
+        try:
+            payload = await self._request(
+                self.settings.nominatim_reverse_url,
+                {"lat": latitude, "lon": longitude, "format": "jsonv2", "zoom": 10, "addressdetails": 1},
+                {"User-Agent": self.settings.nominatim_user_agent, "Accept": "application/json"},
+            )
+        except ProviderError as exc:
+            raise LocationProviderError("Reverse geocoding provider request failed", retryable=exc.retryable) from exc
         try:
             address = payload["address"]
             if not isinstance(address, dict):
                 raise TypeError("address is not an object")
             city = self._first_string(address, "city", "town", "village", "municipality", "county")
-            name = self._first_string(address, "suburb", "neighbourhood", "city_district")
             state = self._first_string(address, "state", "state_district")
             country = self._first_string(address, "country")
-            parts = [part for part in (name, city, state, country) if part]
+            name = city or self._first_string(address, "municipality", "county", "suburb", "neighbourhood", "city_district")
+            name = self._clean_locality(name)
+            city = self._clean_locality(city)
+            parts = [part for part in (city, state, country) if part]
+            if not parts and name:
+                parts = [name]
             if not parts:
                 raise ValueError("no locality fields")
             return ReverseLocation(name=name, city=city, state=state, country=country, display_name=", ".join(dict.fromkeys(parts)))
         except (KeyError, TypeError, ValueError) as exc:
-            raise ProviderMalformedResponse("Reverse geocoding returned no usable locality data", retryable=False) from exc
+            raise LocationProviderError("Reverse geocoding returned no usable locality data", retryable=False) from exc
+
+    @staticmethod
+    def _provider_name(url: str) -> str:
+        return "nominatim" if "nominatim" in url else "open-meteo"
 
     @staticmethod
     def _first_string(data: dict[str, Any], *keys: str) -> str | None:
@@ -86,6 +103,12 @@ class OpenMeteoProvider:
             if isinstance(value, str) and value.strip():
                 return value.strip()
         return None
+
+    @staticmethod
+    def _clean_locality(value: str | None) -> str | None:
+        if value is None:
+            return None
+        return re.sub(r"\s+(?:mandal|district)$", "", value, flags=re.IGNORECASE).strip() or None
 
     async def get_weather_snapshot(self, latitude: float, longitude: float) -> WeatherSnapshot:
         # The provider's current timestamp may sit between hourly values; request

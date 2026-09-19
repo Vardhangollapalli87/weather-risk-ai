@@ -3,8 +3,8 @@ import type { Analysis, ReverseLocation } from "../types";
 
 export default function ProductHero({ children, analysis, deviceLocation }: { children: ReactNode; analysis: Analysis | null; deviceLocation: ReverseLocation | null }) {
   const location = analysis?.weather.location;
-  const title = deviceLocation?.name ?? analysis?.location_name ?? location?.name;
-  const subtitle = deviceLocation ? [deviceLocation.city, deviceLocation.state, deviceLocation.country].filter(Boolean).filter(part => part !== deviceLocation.name).join(", ") : [location?.admin1, location?.country].filter(Boolean).join(", ");
+  const title = deviceLocation?.display_name ?? analysis?.location_name ?? location?.name;
+  const subtitle = deviceLocation ? "" : [location?.admin1, location?.country].filter(Boolean).join(", ");
   const temperature = analysis?.weather.current.temperature_c;
   const cloud = analysis?.weather.current.cloud_cover_percent;
   const rain = analysis?.weather.current.precipitation_mm;

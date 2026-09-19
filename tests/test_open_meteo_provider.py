@@ -34,8 +34,69 @@ async def test_reverse_geocoding_returns_locality_without_address() -> None:
     provider = OpenMeteoProvider(Settings(), client)
     location = await provider.reverse_geocode(17.49, 78.39)
     await client.aclose()
-    assert location.display_name == "Kukatpally, Hyderabad, Telangana, India"
+    assert location.display_name == "Hyderabad, Telangana, India"
     assert "Private Road" not in location.display_name
+
+
+@pytest.mark.asyncio
+async def test_reverse_geocoding_uses_village_state_country_and_headers() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"address": {"village": "Basar", "state": "Telangana", "country": "India"}})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider = OpenMeteoProvider(Settings(), client)
+    location = await provider.reverse_geocode(18.8834, 77.9204)
+    await client.aclose()
+    assert location.display_name == "Basar, Telangana, India"
+    assert seen[0].headers["Accept"] == "application/json"
+    assert seen[0].headers["User-Agent"] == Settings().nominatim_user_agent
+
+
+@pytest.mark.asyncio
+async def test_reverse_geocoding_cleans_administrative_locality_suffix() -> None:
+    client = mock_client({"address": {"county": "Basar mandal", "state": "Telangana", "country": "India"}})
+    provider = OpenMeteoProvider(Settings(), client)
+    location = await provider.reverse_geocode(18.8834, 77.9204)
+    await client.aclose()
+    assert location.display_name == "Basar, Telangana, India"
+
+
+@pytest.mark.asyncio
+async def test_reverse_geocoding_retries_429_then_succeeds() -> None:
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(429 if attempts == 1 else 200, json={"address": {"town": "Basar", "state": "Telangana", "country": "India"}})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider = OpenMeteoProvider(Settings(weather_max_retries=1), client)
+    location = await provider.reverse_geocode(18.8834, 77.9204)
+    await client.aclose()
+    assert attempts == 2
+    assert location.display_name == "Basar, Telangana, India"
+
+
+@pytest.mark.asyncio
+async def test_reverse_geocoding_500_is_bounded_and_retryable() -> None:
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(500, json={"error": "not exposed"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider = OpenMeteoProvider(Settings(weather_max_retries=2), client)
+    with pytest.raises(ProviderError) as error:
+        await provider.reverse_geocode(18.8834, 77.9204)
+    await client.aclose()
+    assert attempts == 3
+    assert error.value.retryable is True
 
 
 @pytest.mark.asyncio

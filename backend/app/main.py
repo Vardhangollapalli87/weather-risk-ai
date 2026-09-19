@@ -12,7 +12,8 @@ from app.api.routes.weather import router as weather_router
 from app.api.routes.analysis import router as analysis_router
 from app.config import get_settings
 from app.core.cache import TTLCache
-from app.core.exceptions import InputValidationError, MLUnavailableError, ProviderError, RuntimeDataError
+from app.core.exceptions import InputValidationError, LocationProviderError, MLUnavailableError, ProviderError, RuntimeDataError
+from app.core.request_context import request_id_context
 from app.ml.inference import MLService
 from app.models.errors import ErrorDetail, ErrorResponse
 from app.models.location import Location
@@ -65,6 +66,11 @@ async def provider_error_handler(request: Request, exc: ProviderError) -> JSONRe
     return error_response(503 if exc.retryable else 502, "WEATHER_PROVIDER_ERROR", str(exc), exc.retryable, getattr(request.state, "request_id", None))
 
 
+@app.exception_handler(LocationProviderError)
+async def location_provider_error_handler(request: Request, exc: LocationProviderError) -> JSONResponse:
+    return error_response(503 if exc.retryable else 502, "LOCATION_PROVIDER_ERROR", str(exc), exc.retryable, getattr(request.state, "request_id", None))
+
+
 @app.exception_handler(MLUnavailableError)
 async def ml_unavailable_handler(request: Request, exc: MLUnavailableError) -> JSONResponse:
     return error_response(503, "ML_MODEL_UNAVAILABLE", str(exc), False, getattr(request.state, "request_id", None))
@@ -88,6 +94,7 @@ async def input_validation_handler(request: Request, exc: InputValidationError) 
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next):
     request.state.request_id = request.headers.get("X-Request-ID", str(uuid4()))
+    request_id_token = request_id_context.set(request.state.request_id)
     started = perf_counter()
     try:
         response = await call_next(request)
@@ -96,4 +103,5 @@ async def request_id_middleware(request: Request, call_next):
         response = error_response(500, "INTERNAL_ERROR", "An unexpected server error occurred.", False, request.state.request_id)
     logging.getLogger("weatherrisk.request").info("request_id=%s method=%s path=%s status=%s duration_ms=%.1f", request.state.request_id, request.method, request.url.path, response.status_code, (perf_counter() - started) * 1000)
     response.headers["X-Request-ID"] = request.state.request_id
+    request_id_context.reset(request_id_token)
     return response

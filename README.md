@@ -61,7 +61,7 @@ Open the Vite URL (normally `http://localhost:5173`).
 
 ## Environment
 
-Backend variables are documented in [.env.example](.env.example): CORS origins, weather HTTP timeout/retries/cache/freshness, and optional LLM placeholders. Open-Meteo P0 needs no API key. Do not expose backend secrets through `VITE_*` variables.
+Backend variables are documented in [.env.example](.env.example): CORS origins, weather HTTP timeout/retries/cache/freshness, configured Nominatim reverse URL/User-Agent, and optional LLM placeholders. Reverse lookups reuse the bounded timeout, exponential retry, and coordinate-based TTL cache settings; no API key is required. Open-Meteo P0 needs no API key. Do not expose backend secrets through `VITE_*` variables.
 
 Frontend uses the build-time `VITE_API_BASE_URL` from [frontend/.env.example](frontend/.env.example). Set it to the local backend URL for development; the frontend fails closed when it is missing rather than guessing a production endpoint.
 

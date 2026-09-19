@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.core.cache import TTLCache
-from app.core.exceptions import ProviderError
+from app.core.exceptions import LocationProviderError, ProviderError
 from app.main import app
 from app.models.location import Location
 from app.providers.open_meteo import OpenMeteoProvider
@@ -39,6 +39,44 @@ def test_invalid_coordinates_are_structured_errors() -> None:
         response = client.get("/weather", params={"latitude": 100, "longitude": 78})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_reverse_invalid_coordinates_are_structured_errors() -> None:
+    with TestClient(app) as client:
+        invalid_latitude = client.get("/locations/reverse", params={"latitude": 90.01, "longitude": 78})
+        invalid_longitude = client.get("/locations/reverse", params={"latitude": 18, "longitude": 180.01})
+    assert invalid_latitude.status_code == 422
+    assert invalid_longitude.status_code == 422
+    assert invalid_latitude.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_reverse_provider_failure_has_location_error_contract() -> None:
+    class BrokenProvider:
+        async def reverse_geocode(self, latitude: float, longitude: float):
+            raise LocationProviderError("Reverse geocoding provider request failed")
+
+    with TestClient(app) as client:
+        app.state.location_service = LocationService(BrokenProvider(), TTLCache(60))
+        response = client.get("/locations/reverse", params={"latitude": 18, "longitude": 78})
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "LOCATION_PROVIDER_ERROR"
+    assert response.json()["error"]["retryable"] is True
+    assert response.json()["error"]["message"] == "Reverse geocoding provider request failed"
+
+
+def test_analysis_does_not_depend_on_reverse_geocoding() -> None:
+    from app.agent.graph import WeatherRiskAgent
+    from tests.test_agent_graph import FakeAnalysisService, sample_weather
+
+    class BrokenReverseProvider:
+        async def reverse_geocode(self, latitude: float, longitude: float):
+            raise LocationProviderError("Reverse geocoding provider request failed")
+
+    with TestClient(app) as client:
+        app.state.location_service = LocationService(BrokenReverseProvider(), TTLCache(60))
+        app.state.weather_risk_agent = WeatherRiskAgent(FakeAnalysisService(sample_weather()))
+        response = client.post("/analysis", json={"latitude": 18, "longitude": 78, "location_name": "Current location"})
+    assert response.status_code == 200
 
 
 def test_empty_and_long_location_query_are_rejected() -> None:

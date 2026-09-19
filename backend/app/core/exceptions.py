@@ -8,6 +8,10 @@ class ProviderMalformedResponse(ProviderError):
     pass
 
 
+class LocationProviderError(ProviderError):
+    pass
+
+
 class MLUnavailableError(Exception):
     pass
 
