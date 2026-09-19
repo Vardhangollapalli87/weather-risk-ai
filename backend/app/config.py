@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     weather_max_staleness_minutes: int = 90
     weather_cache_ttl_seconds: int = 300
     weather_max_retries: int = 2
+    model_artifact_path: str = "models/weather_risk_model.joblib"
+    nominatim_reverse_url: str = "https://nominatim.openstreetmap.org/reverse"
+    nominatim_user_agent: str = "WeatherRiskAI/0.1 (student decision-support project)"
     llm_provider: str = ""
     llm_api_key: str = ""
     llm_model: str = ""

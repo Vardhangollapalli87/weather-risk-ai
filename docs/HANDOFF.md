@@ -6,7 +6,7 @@ WeatherRisk AI provides real-time, explainable **significant-rainfall risk** int
 
 ## Current phase
 
-Phase 5B complete — professional dashboard redesign and exact location identity.
+Production-readiness preparation complete; deployment remains intentionally manual.
 
 ## Status
 
@@ -33,11 +33,11 @@ The complete local vertical slice is implemented and hardened: React dashboard, 
 
 ## Current work
 
-Phase 5B is complete.
+Production-readiness preparation is complete.
 
 ## Exact next task
 
-Phase 5 — Deployment + final project packaging. Do not implement it without explicit direction.
+Phase 5 — Manual backend/frontend deployment and final project packaging. Do not deploy without explicit direction.
 
 ## Architecture summary
 
@@ -61,4 +61,4 @@ Audit results: `pytest -q` has 30 passing tests and one third-party TestClient d
 
 ## Last completed milestone
 
-Phase 5B dashboard redesign and exact location identity, 2026-09-19.
+Production-readiness preparation, 2026-09-19.

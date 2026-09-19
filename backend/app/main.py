@@ -25,7 +25,11 @@ from app.agent.graph import WeatherRiskAgent
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_ARTIFACT_PATH = PROJECT_ROOT / "models" / "weather_risk_model.joblib"
+
+
+def resolve_model_artifact_path(configured_path: str) -> Path:
+    path = Path(configured_path)
+    return path if path.is_absolute() else PROJECT_ROOT / path
 
 
 def error_response(status_code: int, code: str, message: str, retryable: bool, request_id: str | None = None) -> JSONResponse:
@@ -39,7 +43,7 @@ async def lifespan(app: FastAPI):
     provider = OpenMeteoProvider(settings)
     app.state.location_service = LocationService(provider, TTLCache[list[Location]](settings.weather_cache_ttl_seconds), TTLCache(settings.weather_cache_ttl_seconds))
     app.state.weather_service = WeatherService(provider, TTLCache[WeatherSnapshot](settings.weather_cache_ttl_seconds))
-    app.state.analysis_service = AnalysisService(app.state.weather_service, MLService(MODEL_ARTIFACT_PATH))
+    app.state.analysis_service = AnalysisService(app.state.weather_service, MLService(resolve_model_artifact_path(settings.model_artifact_path)))
     app.state.weather_risk_agent = WeatherRiskAgent(app.state.analysis_service)
     yield
 

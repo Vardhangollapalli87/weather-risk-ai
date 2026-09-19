@@ -63,7 +63,32 @@ Open the Vite URL (normally `http://localhost:5173`).
 
 Backend variables are documented in [.env.example](.env.example): CORS origins, weather HTTP timeout/retries/cache/freshness, and optional LLM placeholders. Open-Meteo P0 needs no API key. Do not expose backend secrets through `VITE_*` variables.
 
-Frontend uses `VITE_API_BASE_URL` from [frontend/.env.example](frontend/.env.example), defaulting to `http://localhost:8000` for local development.
+Frontend uses the build-time `VITE_API_BASE_URL` from [frontend/.env.example](frontend/.env.example). Set it to the local backend URL for development; the frontend fails closed when it is missing rather than guessing a production endpoint.
+
+## Production deployment
+
+Deploy the React static build and FastAPI modular monolith separately:
+
+```text
+Browser → static frontend hosting → HTTPS → FastAPI backend → Open-Meteo / Nominatim / local model artifact
+```
+
+Build the frontend with the public backend URL supplied at build time. Do not use a localhost value in production and do not put secrets in `VITE_*` variables:
+
+```powershell
+Set-Item Env:VITE_API_BASE_URL "https://your-backend.example"
+npm run build --prefix frontend
+```
+
+Configure the backend using a private environment file or hosting-platform environment settings. At minimum, set `APP_ENV=production`, `CORS_ORIGINS` to the exact deployed frontend origin, and `MODEL_ARTIFACT_PATH` to the model artifact available in the runtime filesystem. The examples in [.env.example](.env.example) document HTTP timeout, cache/retry, Nominatim, and optional LLM settings. `GET /health` is suitable for a platform health check and intentionally does not call external providers.
+
+The model artifact (`models/weather_risk_model.joblib`) is approximately 66 MB and is intentionally ignored by Git. A deployment must supply it through an approved build artifact, secure volume, or platform artifact mechanism; a source-only checkout cannot serve `/analysis` without it. The backend resolves a relative `MODEL_ARTIFACT_PATH` from the repository root, so it remains independent of the Uvicorn working directory.
+
+Nominatim reverse geocoding is backend-only, bounded by the configured HTTP timeout, cached, and invoked only after a user explicitly requests browser location access. It returns locality-level identity only, never street-address data.
+
+Docker was assessed but is not included: because the model is deliberately absent from source control, a generic image would either fail to build or incorrectly bake a local artifact into the image. Use the hosting platform's artifact/volume mechanism first, then add a deployment-specific image once that model-delivery path is chosen.
+
+WeatherRisk AI is decision-support software. It is not an official weather warning or flood prediction system.
 
 ## API
 

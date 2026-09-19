@@ -15,7 +15,6 @@ class OpenMeteoProvider:
     geocoding_url = "https://geocoding-api.open-meteo.com/v1/search"
     forecast_url = "https://api.open-meteo.com/v1/forecast"
     archive_url = "https://archive-api.open-meteo.com/v1/archive"
-    reverse_geocoding_url = "https://nominatim.openstreetmap.org/reverse"
     hourly_fields = ["temperature_2m", "relative_humidity_2m", "pressure_msl", "wind_speed_10m", "cloud_cover", "precipitation", "precipitation_probability", "weather_code"]
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
@@ -61,9 +60,9 @@ class OpenMeteoProvider:
 
     async def reverse_geocode(self, latitude: float, longitude: float) -> ReverseLocation:
         payload = await self._request(
-            self.reverse_geocoding_url,
+            self.settings.nominatim_reverse_url,
             {"lat": latitude, "lon": longitude, "format": "jsonv2", "zoom": 10, "addressdetails": 1},
-            {"User-Agent": "WeatherRiskAI/0.1 (student decision-support project)"},
+            {"User-Agent": self.settings.nominatim_user_agent},
         )
         try:
             address = payload["address"]

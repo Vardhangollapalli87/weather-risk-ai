@@ -1,8 +1,9 @@
 import type { Analysis, Location, ReverseLocation } from "../types";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!baseUrl) throw new Error("WeatherRisk AI is missing its backend URL configuration.");
   let response: Response;
   try { response = await fetch(`${baseUrl}${path}`, init); } catch (error) { if ((error as DOMException).name === "AbortError") throw error; throw new Error("Unable to reach the WeatherRisk AI backend. Please try again."); }
   const body = await response.json().catch(() => null);
