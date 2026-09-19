@@ -6,7 +6,10 @@ All responses use ISO-8601 timestamps, metric units, and a `source`/`retrieved_a
 |---|---|---|
 | `GET /health` | service health | status, version |
 | `GET /locations?query=` | provider-backed place search | id, name, country, latitude, longitude, timezone |
+| `GET /locations/reverse?latitude=&longitude=` | privacy-filtered reverse lookup after an explicit device-location request | locality, city, state, country, display_name |
 | `GET /weather?latitude=&longitude=` | normalized current/recent/forecast data | current, hourly, daily_summary, provenance, freshness |
 | `POST /analysis` | model, deterministic risk, and constrained explanation | weather, ml_prediction, risk, explanation, status |
 
 `POST /analysis` accepts an optional selected location name plus coordinates; it never accepts client-provided weather values. A success response separates normalized `weather`, calibrated `ml_prediction`, deterministic `risk`, and `explanation` (`summary`, `why_this_risk`, `key_factors`, `what_to_watch`, `disclaimer`, `source`). The explanation is evidence-constrained and defaults to `source: "template"` when no LLM provider is configured or its output is invalid. If the model artifact is absent it returns `503 ML_MODEL_UNAVAILABLE`. Error format: `{ "error": { "code", "message", "request_id", "retryable" } }`.
+
+`GET /locations/reverse` returns locality-level identity fields only; it excludes street-address fields and is called only after the user explicitly requests browser location access.

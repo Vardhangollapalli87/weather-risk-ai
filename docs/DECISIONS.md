@@ -40,3 +40,10 @@
 - **Reason:** it had the best validation PR-AUC (0.61307) and F1 (0.58501) of the two required models.
 - **Alternatives:** calibrated Logistic Regression; retained as baseline but had lower validation PR-AUC (0.60500).
 - **Status/date:** Accepted, 2026-09-18. The held-out test PR-AUC of 0.55054 is documented as a limitation, not hidden.
+
+## ADR-007 — Backend reverse geocoding for explicit device-location identity
+
+- **Decision:** after an explicit browser geolocation request, use a cached Nominatim reverse lookup behind the existing provider/service boundary and return locality/city/state/country only.
+- **Reason:** the UI needs a human-readable location identity without exposing street-address information or calling external services from React.
+- **Alternatives:** display raw coordinates only (rejected: poor location identity); direct frontend reverse-geocoding call (rejected: bypasses the backend data boundary).
+- **Status/date:** Accepted, 2026-09-19.

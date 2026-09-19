@@ -37,7 +37,7 @@ def error_response(status_code: int, code: str, message: str, retryable: bool, r
 async def lifespan(app: FastAPI):
     settings = get_settings()
     provider = OpenMeteoProvider(settings)
-    app.state.location_service = LocationService(provider, TTLCache[list[Location]](settings.weather_cache_ttl_seconds))
+    app.state.location_service = LocationService(provider, TTLCache[list[Location]](settings.weather_cache_ttl_seconds), TTLCache(settings.weather_cache_ttl_seconds))
     app.state.weather_service = WeatherService(provider, TTLCache[WeatherSnapshot](settings.weather_cache_ttl_seconds))
     app.state.analysis_service = AnalysisService(app.state.weather_service, MLService(MODEL_ARTIFACT_PATH))
     app.state.weather_risk_agent = WeatherRiskAgent(app.state.analysis_service)

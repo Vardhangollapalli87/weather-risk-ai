@@ -6,11 +6,11 @@ WeatherRisk AI provides real-time, explainable **significant-rainfall risk** int
 
 ## Current phase
 
-Phase 5A complete — decision-support dashboard enhancement.
+Phase 5B complete — professional dashboard redesign and exact location identity.
 
 ## Status
 
-The complete local vertical slice is implemented and hardened: React dashboard, FastAPI, Open-Meteo, ML inference, deterministic risk, and LangGraph template explanation. Phase 5A adds opt-in browser geolocation, richer backend-evidence presentation, and a lightweight forecast timeline. No external LLM provider, RAG, database, authentication, or deployment has been added.
+The complete local vertical slice is implemented and hardened: React dashboard, FastAPI, Open-Meteo, ML inference, deterministic risk, and LangGraph template explanation. Phase 5B adds a professional environmental-intelligence visual system and a privacy-filtered, cached reverse-geocoding identity lookup after an explicit device-location request. No external LLM provider, RAG, database, authentication, or deployment has been added.
 
 ## Completed
 
@@ -28,11 +28,12 @@ The complete local vertical slice is implemented and hardened: React dashboard, 
 - Single-agent LangGraph workflow implemented with a typed evidence object, provider-independent explanation interface, validation, and deterministic template fallback.
 - Responsive Vite + React + TypeScript dashboard implemented with centralized API client, location search, analysis display, forecast cards, explanation, provenance/freshness, loading, no-results, retry, and error states.
 - Phase 5A adds user-initiated browser geolocation with permission/unavailable/timeout handling and no coordinate persistence; backend-derived risk details/factors; an SVG rainfall/probability timeline; and responsive/accessibility refinements. The frontend does not calculate risk.
+- Phase 5B redesigns the dashboard hierarchy and risk/conditions/signals/timeline/provenance presentation. `GET /locations/reverse` uses a cached Nominatim request only after a user initiates browser geolocation, and returns locality/city/state/country—not an address.
 - Phase 4 audit fixed browser CORS for JSON `POST /analysis`, whitespace-only location validation, corrupt/invalid ML artifact handling, safe request logging, frontend request race cancellation, and generated TypeScript artifact ignores.
 
 ## Current work
 
-Phase 5A is complete.
+Phase 5B is complete.
 
 ## Exact next task
 
@@ -48,7 +49,7 @@ Phase 4 updated backend exception/CORS/request logging logic, ML artifact valida
 
 ## API / ML / agent status
 
-Implemented: `GET /health`, `GET /locations?query=`, `GET /weather?latitude=&longitude=`, and `POST /analysis`. The React app consumes `/locations` and `/analysis`; it never calls Open-Meteo or performs ML/risk calculations. No external LLM is configured, so the rendered explanation source is the valid deterministic template fallback.
+Implemented: `GET /health`, `GET /locations?query=`, `GET /locations/reverse?latitude=&longitude=`, `GET /weather?latitude=&longitude=`, and `POST /analysis`. The React app consumes backend endpoints only; it never calls Open-Meteo/Nominatim or performs ML/risk calculations. No external LLM is configured, so the rendered explanation source is the valid deterministic template fallback.
 
 ## Environment
 
@@ -60,4 +61,4 @@ Audit results: `pytest -q` has 30 passing tests and one third-party TestClient d
 
 ## Last completed milestone
 
-Phase 5A dashboard enhancement, 2026-09-19.
+Phase 5B dashboard redesign and exact location identity, 2026-09-19.

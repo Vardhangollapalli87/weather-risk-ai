@@ -1,4 +1,4 @@
-import type { Analysis, Location } from "../types";
+import type { Analysis, Location, ReverseLocation } from "../types";
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -11,4 +11,5 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const searchLocations = (query: string, signal?: AbortSignal) => request<Location[]>(`/locations?query=${encodeURIComponent(query)}`, { signal });
+export const reverseLocation = (latitude: number, longitude: number, signal?: AbortSignal) => request<ReverseLocation>(`/locations/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`, { signal });
 export const getAnalysis = (location: Location, signal?: AbortSignal) => request<Analysis>("/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude, location_name: [location.name, location.admin1].filter(Boolean).join(", ") }) });

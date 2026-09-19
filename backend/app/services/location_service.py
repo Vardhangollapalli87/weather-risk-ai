@@ -1,12 +1,13 @@
 from app.core.cache import TTLCache
-from app.models.location import Location
+from app.models.location import Location, ReverseLocation
 from app.providers.base import WeatherProvider
 
 
 class LocationService:
-    def __init__(self, provider: WeatherProvider, cache: TTLCache[list[Location]]) -> None:
+    def __init__(self, provider: WeatherProvider, cache: TTLCache[list[Location]], reverse_cache: TTLCache[ReverseLocation] | None = None) -> None:
         self.provider = provider
         self.cache = cache
+        self.reverse_cache = reverse_cache or TTLCache[ReverseLocation](cache.ttl_seconds)
 
     async def search(self, query: str) -> list[Location]:
         key = f"locations:{query.casefold()}"
@@ -15,4 +16,13 @@ class LocationService:
     async def _fetch_and_cache(self, key: str, query: str) -> list[Location]:
         result = await self.provider.search_locations(query)
         self.cache.set(key, result)
+        return result
+
+    async def reverse(self, latitude: float, longitude: float) -> ReverseLocation:
+        key = f"reverse:{latitude:.3f}:{longitude:.3f}"
+        cached = self.reverse_cache.get(key)
+        if cached is not None:
+            return cached
+        result = await self.provider.reverse_geocode(latitude, longitude)
+        self.reverse_cache.set(key, result)
         return result

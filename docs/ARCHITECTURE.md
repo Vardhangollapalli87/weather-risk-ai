@@ -29,7 +29,7 @@ The frontend never calls weather providers directly. Backend services own provid
 
 ## 4. Weather data strategy
 
-`OpenMeteoProvider` implements a small `WeatherProvider` protocol: `search_locations`, `get_weather_snapshot`, and `get_historical_hourly`. Forecast calls request current and hourly temperature, relative humidity, sea-level pressure, wind speed, cloud cover, precipitation, precipitation probability, and weather code; request `past_hours=24` for recent accumulation. Geocoding resolves a user query to coordinates/timezone.
+`OpenMeteoProvider` implements a small `WeatherProvider` protocol: `search_locations`, `reverse_geocode`, `get_weather_snapshot`, and `get_historical_hourly`. Forecast calls request current and hourly temperature, relative humidity, sea-level pressure, wind speed, cloud cover, precipitation, precipitation probability, and weather code; request `past_hours=24` for recent accumulation. Open-Meteo geocoding resolves a user query to coordinates/timezone. An explicit browser-device-location request may use the backend's cached Nominatim reverse lookup to return locality/city/state/country only; it never returns or displays street-address fields.
 
 Historical training uses Open-Meteo `/v1/archive` with ERA5 hourly data, selecting the same feasible meteorological variables but never pretending reanalysis is station observation. The service records provider generation time, retrieval time, source/model metadata, and the requested location. If data is older than the configured freshness threshold, analysis is labelled stale; provider failure returns a structured 502/503 and no invented fallback values.
 
@@ -59,7 +59,7 @@ RAG is P1 only. If added, it will retrieve a tiny curated, versioned set of auth
 
 ## 8. Frontend and API
 
-React state is limited to selected location, loading/error state, and analysis response. The dashboard renders data provenance/time, current conditions, 24-hour outlook, ML probability, risk card, factors, and explanation. API schemas are defined in `API_CONTRACT.md`; endpoint groups are `/locations`, `/weather`, `/analysis`, and `/health`.
+React state is limited to selected location, loading/error state, and analysis response. The dashboard renders data provenance/time, current conditions, 24-hour outlook, ML probability, risk card, factors, and explanation. API schemas are defined in `API_CONTRACT.md`; endpoint groups are `/locations` (including `/locations/reverse` for explicit device-location identity), `/weather`, `/analysis`, and `/health`.
 
 ## 9. Persistence, resilience, security, and operations
 

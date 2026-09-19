@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.models.location import Location
+from app.models.location import Location, ReverseLocation
 from app.models.weather import WeatherSnapshot
 from app.services.location_service import LocationService
 from app.services.weather_service import WeatherService
@@ -25,6 +25,11 @@ async def locations(query: Annotated[str, Query(min_length=1, max_length=100)], 
     if not normalized_query:
         raise InputValidationError("Location query must contain non-whitespace characters.")
     return await service.search(normalized_query)
+
+
+@router.get("/locations/reverse", response_model=ReverseLocation)
+async def reverse_location(latitude: Annotated[float, Query(ge=-90, le=90)], longitude: Annotated[float, Query(ge=-180, le=180)], service: Annotated[LocationService, Depends(location_service)]) -> ReverseLocation:
+    return await service.reverse(latitude, longitude)
 
 
 @router.get("/weather", response_model=WeatherSnapshot)

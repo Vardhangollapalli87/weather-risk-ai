@@ -7,7 +7,7 @@ import httpx
 from app.config import Settings
 from app.core.exceptions import ProviderError, ProviderMalformedResponse
 from app.core.freshness import assess_freshness
-from app.models.location import Location
+from app.models.location import Location, ReverseLocation
 from app.models.weather import CurrentConditions, HourlyWeather, ProviderMetadata, RainfallSummary, WeatherSnapshot
 
 
@@ -15,19 +15,20 @@ class OpenMeteoProvider:
     geocoding_url = "https://geocoding-api.open-meteo.com/v1/search"
     forecast_url = "https://api.open-meteo.com/v1/forecast"
     archive_url = "https://archive-api.open-meteo.com/v1/archive"
+    reverse_geocoding_url = "https://nominatim.openstreetmap.org/reverse"
     hourly_fields = ["temperature_2m", "relative_humidity_2m", "pressure_msl", "wind_speed_10m", "cloud_cover", "precipitation", "precipitation_probability", "weather_code"]
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         self.settings = settings
         self._client = client
 
-    async def _request(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
+    async def _request(self, url: str, params: dict[str, Any], headers: dict[str, str] | None = None) -> dict[str, Any]:
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(timeout=self.settings.weather_http_timeout_seconds)
         try:
             for attempt in range(self.settings.weather_max_retries + 1):
                 try:
-                    response = await client.get(url, params=params)
+                    response = await client.get(url, params=params, headers=headers)
                     if response.status_code >= 500:
                         raise ProviderError("Weather provider is temporarily unavailable")
                     response.raise_for_status()
@@ -57,6 +58,35 @@ class OpenMeteoProvider:
             return [Location(id=item.get("id"), name=item["name"], country=item.get("country"), admin1=item.get("admin1"), latitude=item["latitude"], longitude=item["longitude"], timezone=item.get("timezone")) for item in results]
         except (KeyError, TypeError, ValueError) as exc:
             raise ProviderMalformedResponse("Weather provider returned malformed location data", retryable=False) from exc
+
+    async def reverse_geocode(self, latitude: float, longitude: float) -> ReverseLocation:
+        payload = await self._request(
+            self.reverse_geocoding_url,
+            {"lat": latitude, "lon": longitude, "format": "jsonv2", "zoom": 10, "addressdetails": 1},
+            {"User-Agent": "WeatherRiskAI/0.1 (student decision-support project)"},
+        )
+        try:
+            address = payload["address"]
+            if not isinstance(address, dict):
+                raise TypeError("address is not an object")
+            city = self._first_string(address, "city", "town", "village", "municipality", "county")
+            name = self._first_string(address, "suburb", "neighbourhood", "city_district")
+            state = self._first_string(address, "state", "state_district")
+            country = self._first_string(address, "country")
+            parts = [part for part in (name, city, state, country) if part]
+            if not parts:
+                raise ValueError("no locality fields")
+            return ReverseLocation(name=name, city=city, state=state, country=country, display_name=", ".join(dict.fromkeys(parts)))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProviderMalformedResponse("Reverse geocoding returned no usable locality data", retryable=False) from exc
+
+    @staticmethod
+    def _first_string(data: dict[str, Any], *keys: str) -> str | None:
+        for key in keys:
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
 
     async def get_weather_snapshot(self, latitude: float, longitude: float) -> WeatherSnapshot:
         # The provider's current timestamp may sit between hourly values; request

@@ -29,6 +29,16 @@ async def test_location_response_is_normalized() -> None:
 
 
 @pytest.mark.asyncio
+async def test_reverse_geocoding_returns_locality_without_address() -> None:
+    client = mock_client({"address": {"suburb": "Kukatpally", "city": "Hyderabad", "state": "Telangana", "country": "India", "road": "Private Road"}})
+    provider = OpenMeteoProvider(Settings(), client)
+    location = await provider.reverse_geocode(17.49, 78.39)
+    await client.aclose()
+    assert location.display_name == "Kukatpally, Hyderabad, Telangana, India"
+    assert "Private Road" not in location.display_name
+
+
+@pytest.mark.asyncio
 async def test_snapshot_parses_hourly_and_rainfall() -> None:
     client = mock_client(weather_payload())
     provider = OpenMeteoProvider(Settings(weather_max_staleness_minutes=9_999_999), client)

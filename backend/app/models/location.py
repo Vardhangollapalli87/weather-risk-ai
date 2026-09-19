@@ -9,3 +9,13 @@ class Location(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     timezone: str | None = None
+
+
+class ReverseLocation(BaseModel):
+    """Privacy-preserving locality identity for an explicit device-location request."""
+
+    name: str | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    display_name: str
