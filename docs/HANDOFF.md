@@ -6,11 +6,11 @@ WeatherRisk AI provides real-time, explainable **significant-rainfall risk** int
 
 ## Current phase
 
-Phase 4 complete — integration, security, and production-readiness audit.
+Phase 5A complete — decision-support dashboard enhancement.
 
 ## Status
 
-The complete local vertical slice is implemented and hardened: React dashboard, FastAPI, Open-Meteo, ML inference, deterministic risk, and LangGraph template explanation. No external LLM provider, RAG, database, authentication, or deployment has been added.
+The complete local vertical slice is implemented and hardened: React dashboard, FastAPI, Open-Meteo, ML inference, deterministic risk, and LangGraph template explanation. Phase 5A adds opt-in browser geolocation, richer backend-evidence presentation, and a lightweight forecast timeline. No external LLM provider, RAG, database, authentication, or deployment has been added.
 
 ## Completed
 
@@ -27,11 +27,12 @@ The complete local vertical slice is implemented and hardened: React dashboard, 
 - Calibrated Random Forest selected with validation threshold 0.55; deterministic risk engine and `POST /analysis` implemented.
 - Single-agent LangGraph workflow implemented with a typed evidence object, provider-independent explanation interface, validation, and deterministic template fallback.
 - Responsive Vite + React + TypeScript dashboard implemented with centralized API client, location search, analysis display, forecast cards, explanation, provenance/freshness, loading, no-results, retry, and error states.
+- Phase 5A adds user-initiated browser geolocation with permission/unavailable/timeout handling and no coordinate persistence; backend-derived risk details/factors; an SVG rainfall/probability timeline; and responsive/accessibility refinements. The frontend does not calculate risk.
 - Phase 4 audit fixed browser CORS for JSON `POST /analysis`, whitespace-only location validation, corrupt/invalid ML artifact handling, safe request logging, frontend request race cancellation, and generated TypeScript artifact ignores.
 
 ## Current work
 
-Phase 4 is complete.
+Phase 5A is complete.
 
 ## Exact next task
 
@@ -59,4 +60,4 @@ Audit results: `pytest -q` has 30 passing tests and one third-party TestClient d
 
 ## Last completed milestone
 
-Phase 4 integration and hardening, 2026-09-19.
+Phase 5A dashboard enhancement, 2026-09-19.
